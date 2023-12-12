@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_weather_app/models/dailyForecast.dart';
@@ -101,6 +100,59 @@ class WeatherApi {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to load daily forecast data');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPrecipitationForecast(
+      String cityName) async {
+    String lat;
+    String lon;
+
+    try {
+      final geocodeResponse = await http.get(Uri.parse(
+          'https://api.openweathermap.org/geo/1.0/direct?q=$cityName&limit=1&appid=$apiKey'));
+
+      if (geocodeResponse.statusCode == 200) {
+        final Map<String, dynamic> geocodeData =
+            json.decode(geocodeResponse.body)[0];
+        lat = geocodeData['lat'].toString();
+        lon = geocodeData['lon'].toString();
+      } else {
+        throw Exception(
+            'Failed to load geocode data: ${geocodeResponse.statusCode}');
+      }
+
+      final response = await http.get(Uri.parse(
+          'https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&exclude=minutely,hourly,current,alerts&units=imperial&appid=$apiKey'));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        List<Map<String, dynamic>> specificFieldsList = [];
+
+        for (Map<String, dynamic> day in responseData['daily']) {
+          int dt = day['dt'];
+          num clouds = day['clouds'];
+          num? rain = day['rain'];
+          num? snow = day['snow'];
+
+          Map<String, dynamic> specificFields = {
+            'dt': dt,
+            'clouds': clouds,
+            'rain': rain,
+            'snow': snow,
+          };
+
+          specificFieldsList.add(specificFields);
+        }
+
+        return specificFieldsList;
+      } else {
+        throw Exception(
+            'Failed to load daily forecast data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception in getPrecipitationForecast: $e');
+      rethrow;
     }
   }
 }
