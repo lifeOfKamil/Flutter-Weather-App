@@ -1,6 +1,7 @@
+import 'package:flutter_weather_app/models/hourlyForecast.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_weather_app/models/dailyForecast.dart';
+import 'package:flutter_weather_app/models/dailyForecast.dart' hide Weather;
 
 class WeatherApi {
   final String apiKey;
@@ -59,12 +60,13 @@ class WeatherApi {
         int dt = day['dt'];
         num tempDay = day['temp']['day'];
         num tempNight = day['temp']['night'];
-        String weatherDescription = day['weather'][0]['description'];
+        //String weatherDescription = day['weather'][0]['description'];
 
         Daily newDay = Daily(
-            dt: dt,
-            temp: Temp(day: tempDay, night: tempNight),
-            weather: [Weather(description: weatherDescription)]);
+          dt: dt,
+          temp: Temp(day: tempDay, night: tempNight),
+          //weather: [Weather(description: weatherDescription)],
+        );
         dailyForecastList.add(newDay);
       }
       forecastList = dailyForecastList;
@@ -72,6 +74,55 @@ class WeatherApi {
       return dailyForecast.fromJson(json.decode(response.body));
     } else {
       throw Exception('Failed to load daily forecast data');
+    }
+  }
+
+  Future<hourlyForecast?> getHourlyForecastData(String cityName) async {
+    String lat;
+    String lon;
+    final geocodeResponse = await http.get(Uri.parse(
+        'https://api.openweathermap.org/geo/1.0/direct?q=$cityName&limit=1&appid=$apiKey'));
+
+    if (geocodeResponse.statusCode == 200) {
+      final Map<String, dynamic> geocodeData =
+          json.decode(geocodeResponse.body)[0];
+      lat = geocodeData['lat'].toString();
+      lon = geocodeData['lon'].toString();
+    } else {
+      throw Exception('Failed to load geocode data');
+    }
+
+    final response = await http.get(Uri.parse(
+        'https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&exclude=minutely,daily,current,alerts&units=imperial&appid=$apiKey'));
+
+    if (response.statusCode == 200) {
+      print(response.body);
+
+      final Map<String, dynamic> responseData = json.decode(response.body);
+
+      List<Map<String, dynamic>> hourlyData =
+          List<Map<String, dynamic>>.from(responseData['hourly']);
+
+      List<Hourly> hourlyForecastList = [];
+
+      for (Map<String, dynamic> hour in hourlyData) {
+        int dt = hour['dt'];
+        String icon = hour['weather'][0]['icon'];
+        num temp = hour['temp'];
+        num windSpeed = hour['wind_speed'];
+
+        Hourly newHour = Hourly(
+          dt: dt,
+          temp: temp,
+          windSpeed: windSpeed,
+          weather: [Weather(icon: icon)],
+        );
+        hourlyForecastList.add(newHour);
+      }
+
+      return hourlyForecast.fromJson(json.decode(response.body));
+    } else {
+      throw Exception('Failed to load hourly forecast data');
     }
   }
 
