@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_weather_app/models/dailyForecast.dart';
+import 'package:flutter_weather_app/models/hourlyForecast.dart';
 import 'package:flutter_weather_app/screens/favorite_locations.dart';
 import 'package:flutter_weather_app/screens/precipitation_forecast.dart';
 import 'package:flutter_weather_app/services/weather_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class WeatherApp extends StatefulWidget {
   final String city;
@@ -29,7 +33,9 @@ class WeatherAppState extends State<WeatherApp> {
   Map<String, dynamic>? hourlyData;
   Map<String, dynamic>? dailyData;
   dailyForecast? dailyForecastData;
+  hourlyForecast? hourlyForecastData;
   List<Daily>? forecastList = [];
+  List<Hourly>? hourlyForecastList = [];
 
   @override
   void initState() {
@@ -47,11 +53,14 @@ class WeatherAppState extends State<WeatherApp> {
     try {
       final data = await weatherApi.getWeather(city);
       final dailyForecast = await weatherApi.getDailyForecastData(city);
+      final hourlyForecast = await weatherApi.getHourlyForecastData(city);
 
       setState(() {
         weatherData = data;
         dailyForecastData = dailyForecast;
         forecastList = dailyForecast?.daily ?? [];
+        hourlyForecastData = hourlyForecast;
+        hourlyForecastList = hourlyForecast?.hourly ?? [];
       });
     } catch (e) {
       print('Error caught: $e');
@@ -119,7 +128,17 @@ class WeatherAppState extends State<WeatherApp> {
         : input;
   }
 
-  void navigateToPrecipitatiopnScreen() {
+  String capitalizeEveryFirstLetter(String input) {
+    List<String> words = input.split(' ');
+    for (int i = 0; i < words.length; i++) {
+      if (words[i].isNotEmpty) {
+        words[i] = words[i][0].toUpperCase() + words[i].substring(1);
+      }
+    }
+    return words.join(' ');
+  }
+
+  void navigateToPrecipitationScreen() {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -142,13 +161,29 @@ class WeatherAppState extends State<WeatherApp> {
     return formattedDate;
   }
 
+  String _getFormattedTime(int? unixTimestamp) {
+    if (unixTimestamp == null) {
+      return '';
+    }
+
+    // Convert Unix timestamp to DateTime
+    DateTime date = DateTime.fromMillisecondsSinceEpoch(unixTimestamp * 1000);
+
+    // Format the DateTime as a string
+    String formattedTime = DateFormat('HH:mm').format(date);
+
+    return formattedTime;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          toolbarHeight: 82,
           backgroundColor: Colors.transparent,
           centerTitle: true,
-          title: const Text('Weather App',
+          title: const Text('',
               style: TextStyle(
                   fontFamily: 'Raleway',
                   fontSize: 28,
@@ -157,23 +192,31 @@ class WeatherAppState extends State<WeatherApp> {
           foregroundColor: Colors.white70,
           elevation: 0.0,
         ),
-        backgroundColor: Colors.white10,
+        backgroundColor: Colors.transparent,
         drawer: Drawer(
-          backgroundColor: Colors.blueGrey,
+          backgroundColor: const Color.fromARGB(255, 15, 21, 34),
           child: ListView(
             padding: EdgeInsets.zero,
             children: <Widget>[
               const DrawerHeader(
                 decoration:
-                    BoxDecoration(color: Color.fromARGB(255, 118, 165, 189)),
+                    BoxDecoration(color: Color.fromARGB(255, 27, 33, 45)),
                 child: Text(
-                  'Weather App Menu',
+                  'Weather App',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontFamily: 'Raleway',
-                      fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontFamily: 'Raleway',
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+              ),
+              const ListTile(
+                title: Text('Current Weather',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Raleway',
+                        color: Colors.white)),
               ),
               ListTile(
                 title: const Text('Change Location',
@@ -241,14 +284,14 @@ class WeatherAppState extends State<WeatherApp> {
               ),
               ListTile(
                 title: const Text(
-                  'Precipitation',
+                  'Precipitation Details',
                   style: TextStyle(
                       fontWeight: FontWeight.w500,
                       fontFamily: 'Raleway',
                       color: Colors.white),
                 ),
                 onTap: () {
-                  navigateToPrecipitatiopnScreen();
+                  navigateToPrecipitationScreen();
                 },
               ),
             ],
@@ -265,7 +308,13 @@ class WeatherAppState extends State<WeatherApp> {
     }
 
     forecastList = dailyForecastData!.daily!;
-    return SizedBox(
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/Background.jpg'),
+          fit: BoxFit.cover,
+        ),
+      ),
       width: MediaQuery.of(context).size.width,
       height: MediaQuery.of(context).size.height,
       child: SingleChildScrollView(
@@ -274,15 +323,14 @@ class WeatherAppState extends State<WeatherApp> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 72.0),
             _locationHeader(),
-            const SizedBox(height: 56.0),
+            currentConditions(),
             _currentTemperature(),
-            const SizedBox(height: 16.0),
             _hiLowTemperature(),
-            const SizedBox(height: 48.0),
-            _buildForecastList(),
-            const SizedBox(height: 32.0),
+            const SizedBox(height: 36.0),
+            _currentWeatherDetailsBanner(),
+            _buildHourlyForecast(),
+            //_buildForecastList(),
           ],
         ),
       ),
@@ -343,80 +391,336 @@ class WeatherAppState extends State<WeatherApp> {
     );
   }
 
+  Widget _buildHourlyForecast() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        const Padding(
+          padding: EdgeInsets.only(top: 40.0),
+          child: Text(
+            'Hourly Forecast',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Raleway',
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        // Use ListView.builder to display the forecastList
+        Container(
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          height: 140,
+          child: ListView.builder(
+            shrinkWrap: true,
+            scrollDirection: Axis.horizontal,
+            itemCount: 6,
+            itemBuilder: (context, index) {
+              // Access forecastList[index] to display individual forecast details
+              return SizedBox(
+                width: 75,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Text(
+                      _getFormattedTime(hourlyForecastList?[index].dt as int?),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    Container(
+                        child: Center(
+                            child: Image.network(
+                      'https://openweathermap.org/img/wn/${hourlyForecastList?[index].weather?[0].icon}.png',
+                      width: 40,
+                      height: 40,
+                    ))),
+                    Text(
+                      '${forecastList?[index].temp?.day?.toInt()}°',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.air_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        Text(
+                          '${hourlyForecastList?[index].windSpeed?.toInt()}mph',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _locationHeader() {
-    return Text(
-      capitalize(city),
-      style: const TextStyle(
-        fontSize: 32,
-        color: Colors.white,
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('EEE, MMM d').format(now);
+    String formattedTime = DateFormat('HH:mm').format(now);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 16.0),
+          child: Text(
+            capitalize(city),
+            style: const TextStyle(
+              fontSize: 44,
+              color: Colors.white,
+              height: 0,
+              fontWeight: FontWeight.normal,
+              letterSpacing: -1,
+              fontFamily: 'Raleway',
+            ),
+          ),
+        ),
+        Text(
+          formattedTime,
+          style: const TextStyle(
+            fontSize: 24,
+            color: Color.fromARGB(235, 255, 255, 255),
+            fontWeight: FontWeight.normal,
+            fontFamily: 'Raleway',
+            letterSpacing: 2,
+            height: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget currentConditions() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: Stack(
+        children: <Widget>[
+          Center(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(
+                  width: 150,
+                  height: 30.0,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Colors.grey.shade900.withOpacity(0.03),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              weatherData != null
+                  ? capitalizeEveryFirstLetter(
+                      '${weatherData!['weather'][0]['description']}')
+                  : 'Loading...',
+              style: const TextStyle(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _currentTemperature() {
-    return Text(
-      weatherData != null
-          ? '${weatherData!['main']['temp'].toInt()}°F'
-          : 'Loading...',
-      style: const TextStyle(
-          fontSize: 88,
-          letterSpacing: -2,
-          color: Colors.white,
-          fontWeight: FontWeight.w300),
-    );
-  }
-
-  Widget _hiLowTemperature() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            children: [
-              const Text(
-                'HIGH',
-                style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w300),
+  Widget _currentWeatherDetailsBanner() {
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.center,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(
+                  width: 350,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.35),
+                  ),
+                ),
               ),
-              Text(
-                weatherData != null
-                    ? '${weatherData!['main']['temp_max'].toInt()}°'
-                    : 'Loading...',
-                style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500),
-              ),
-            ],
+            ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const Text(
-                'LOW',
-                style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w300),
-              ),
-              Text(
-                weatherData != null
-                    ? '${weatherData!['main']['temp_min'].toInt()}°'
-                    : 'Loading...',
-                style: const TextStyle(
-                    fontSize: 18,
+              Row(
+                children: [
+                  Text(
+                    weatherData != null
+                        ? '${weatherData!['clouds']['all'].toString()}% '
+                        : 'Loading...',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w400,
+                      height: 1,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.cloud_outlined,
                     color: Colors.white,
-                    fontWeight: FontWeight.w500),
+                    size: 20,
+                  )
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    weatherData != null
+                        ? '${weatherData!['main']['humidity'].toString()}% '
+                        : 'Loading...',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w400,
+                      height: 1,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.water_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  )
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    weatherData != null
+                        ? '${weatherData!['wind']['speed'].toInt()} mph '
+                        : 'Loading...',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w400,
+                      height: 1,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.air_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _currentTemperature() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 56.0),
+      child: Text(
+        weatherData != null
+            ? '${weatherData!['main']['temp'].toInt()}°'
+            : 'Loading...',
+        style: const TextStyle(
+            fontSize: 128,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Raleway',
+            height: 1),
+      ),
+    );
+  }
+
+  Widget _hiLowTemperature() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24.0),
+      child: Container(
+        height: 36.0,
+        width: 130,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10.0),
+          color: Colors.grey.shade900.withOpacity(0.1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                children: [
+                  const Text(
+                    'H: ',
+                    style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        height: 1,
+                        fontWeight: FontWeight.w400),
+                  ),
+                  Text(
+                    weatherData != null
+                        ? '${weatherData!['main']['temp_max'].toInt()}°'
+                        : 'Loading...',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        height: 1,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Row(
+                children: [
+                  const Text(
+                    'L: ',
+                    style: TextStyle(
+                        fontSize: 18,
+                        height: 1,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400),
+                  ),
+                  Text(
+                    weatherData != null
+                        ? '${weatherData!['main']['temp_min'].toInt()}°'
+                        : 'Loading...',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        height: 1,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
