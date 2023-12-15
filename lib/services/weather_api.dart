@@ -47,7 +47,7 @@ class WeatherApi {
         'https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&exclude=minutely,hourly,current,alerts&units=imperial&appid=$apiKey'));
 
     if (response.statusCode == 200) {
-      print(response.body);
+      //print(response.body);
 
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -70,7 +70,7 @@ class WeatherApi {
         dailyForecastList.add(newDay);
       }
       forecastList = dailyForecastList;
-      print('Printing daily forecast ${forecastList[0]}');
+      //print('Printing daily forecast ${forecastList[0]}');
       return dailyForecast.fromJson(json.decode(response.body));
     } else {
       throw Exception('Failed to load daily forecast data');
@@ -96,7 +96,7 @@ class WeatherApi {
         'https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&exclude=minutely,daily,current,alerts&units=imperial&appid=$apiKey'));
 
     if (response.statusCode == 200) {
-      print(response.body);
+      //print(response.body);
 
       final Map<String, dynamic> responseData = json.decode(response.body);
 
