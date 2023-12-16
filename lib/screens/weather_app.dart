@@ -1,8 +1,9 @@
 import 'dart:ui';
-
+import 'package:bottom_navy_bar/bottom_navy_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_weather_app/models/dailyForecast.dart';
 import 'package:flutter_weather_app/models/hourlyForecast.dart';
+import 'package:flutter_weather_app/screens/daily_forecast.dart';
 import 'package:flutter_weather_app/screens/favorite_locations.dart';
 import 'package:flutter_weather_app/screens/precipitation_forecast.dart';
 import 'package:flutter_weather_app/services/weather_api.dart';
@@ -20,6 +21,7 @@ class WeatherApp extends StatefulWidget {
 }
 
 class WeatherAppState extends State<WeatherApp> {
+  int _currentIndex = 0;
   late String city;
 
   WeatherAppState({required this.city});
@@ -29,6 +31,8 @@ class WeatherAppState extends State<WeatherApp> {
   late WeatherApi weatherApi = WeatherApi(apiKey: apiKey);
 
   String cityDefault = 'Chicago';
+  String currentTime = '';
+
   Map<String, dynamic>? weatherData;
   Map<String, dynamic>? hourlyData;
   Map<String, dynamic>? dailyData;
@@ -147,6 +151,13 @@ class WeatherAppState extends State<WeatherApp> {
     );
   }
 
+  void navigateToDailyForecast() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DailyForecast()),
+    );
+  }
+
   String _getFormattedDate(int? unixTimestamp) {
     if (unixTimestamp == null) {
       return '';
@@ -171,106 +182,194 @@ class WeatherAppState extends State<WeatherApp> {
 
     // Format the DateTime as a string
     String formattedTime = DateFormat('HH:mm').format(date);
+    currentTime = formattedTime;
 
     return formattedTime;
+  }
+
+  String _getSunMoonDuration(int? moonrise, int? moonset) {
+    if (moonrise == null || moonset == null) {
+      return 'N/A';
+    }
+
+    DateTime moonriseTime =
+        DateTime.fromMillisecondsSinceEpoch(moonrise * 1000);
+    DateTime moonsetTime = DateTime.fromMillisecondsSinceEpoch(moonset * 1000);
+
+    Duration duration = moonsetTime.difference(moonriseTime);
+
+    // Format the time as HH:mm
+    String formattedDuration =
+        '${duration.inHours.toString()} hrs ${(duration.inMinutes % 60).toString()} mins';
+
+    return formattedDuration;
+  }
+
+  String getTemperature(String location) {
+    if (weatherData == null) {
+      return 'Loading...';
+    }
+
+    return '${weatherData!['main']['temp'].toInt()}°';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          toolbarHeight: 82,
-          backgroundColor: Colors.transparent,
-          centerTitle: true,
-          title: const Text('',
-              style: TextStyle(
-                  fontFamily: 'Raleway',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white)),
-          foregroundColor: Colors.white70,
-          elevation: 0.0,
-        ),
+      backgroundColor: const Color.fromARGB(255, 15, 21, 34),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        toolbarHeight: 96,
         backgroundColor: Colors.transparent,
-        drawer: Drawer(
-          backgroundColor: const Color.fromARGB(255, 15, 21, 34),
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: <Widget>[
-              const DrawerHeader(
+        centerTitle: true,
+        title: const Text(
+          '',
+          style: TextStyle(
+              fontFamily: 'Raleway',
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: Colors.white),
+        ),
+        foregroundColor: Colors.white,
+        elevation: 0.0,
+      ),
+      drawer: Drawer(
+        backgroundColor: const Color.fromARGB(255, 15, 21, 34),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Expanded(
+              child: Container(
                 decoration:
-                    BoxDecoration(color: Color.fromARGB(255, 27, 33, 45)),
-                child: Text(
-                  'Weather App',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontFamily: 'Raleway',
-                    fontWeight: FontWeight.w500,
-                  ),
+                    const BoxDecoration(color: Color.fromARGB(255, 27, 33, 45)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ListTile(
+                      title: Text(
+                        'Weather App',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontFamily: 'Raleway',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: ListTile(
+                        title: Text(
+                          city,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      title: Text(
+                        currentTime,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w300,
+                          fontSize: 24,
+                          letterSpacing: 1,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 32.0, bottom: 8.0),
+                      child: ListTile(
+                        title: Text(
+                          weatherData != null
+                              ? capitalizeEveryFirstLetter(
+                                  '${weatherData!['weather'][0]['description']}')
+                              : 'Loading...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 18,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    )
+                  ],
                 ),
               ),
-              const ListTile(
-                title: Text('Current Weather',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Container(
+                child: ListTile(
+                  title: const Text(
+                    'Change Location',
                     style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Raleway',
-                        color: Colors.white)),
-              ),
-              ListTile(
-                title: const Text('Change Location',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Raleway',
-                        color: Colors.white)),
-                onTap: () {
-                  // Show a dialog or navigate to a screen for changing location
-                  // For simplicity, we'll use a dialog for this example
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      String userInputLocation = '';
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'Raleway',
+                      color: Colors.white,
+                      fontSize: 18.0,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  onTap: () {
+                    // Show a dialog or navigate to a screen for changing location
+                    // For simplicity, we'll use a dialog for this example
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        String userInputLocation = '';
 
-                      return AlertDialog(
-                        title: const Text('Find Location'),
-                        content: TextField(
-                          onChanged: (newLocation) {
-                            // Handle changes in the text field
-                            userInputLocation = newLocation;
-                          },
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Close the dialog
+                        return AlertDialog(
+                          title: const Text('Find Location'),
+                          content: TextField(
+                            onChanged: (newLocation) {
+                              // Handle changes in the text field
+                              userInputLocation = newLocation;
                             },
-                            child: const Text('Cancel'),
                           ),
-                          TextButton(
-                            onPressed: () {
-                              // Retrieve the new location from the text field
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          WeatherApp(city: userInputLocation)));
-                            },
-                            child: const Text('Search'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context); // Close the dialog
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                // Retrieve the new location from the text field
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => WeatherApp(
+                                            city: userInputLocation)));
+                              },
+                              child: const Text('Search'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-              ListTile(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
                 title: const Text(
                   'Favorite Locations',
                   style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Raleway',
-                      color: Colors.white),
+                    fontWeight: FontWeight.w400,
+                    fontFamily: 'Raleway',
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    letterSpacing: 1,
+                  ),
                 ),
                 onTap: () {
                   // Show a screen for managing favorite locations
@@ -282,22 +381,129 @@ class WeatherAppState extends State<WeatherApp> {
                   // Close the drawer after selecting the option
                 },
               ),
-              ListTile(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
                 title: const Text(
-                  'Precipitation Details',
+                  'Precipitation Outlook',
                   style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Raleway',
-                      color: Colors.white),
+                    fontWeight: FontWeight.w400,
+                    fontFamily: 'Raleway',
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    letterSpacing: 1,
+                  ),
                 ),
                 onTap: () {
                   navigateToPrecipitationScreen();
                 },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        body: _buildUI());
+      ),
+      body: SingleChildScrollView(
+        child: Center(
+          child: _buildUI(),
+        ),
+      ),
+      bottomNavigationBar: BottomNavyBar(
+        selectedIndex: _currentIndex,
+        backgroundColor: const Color.fromARGB(223, 12, 17, 30),
+        onItemSelected: (index) {
+          setState(() {
+            if (index == 0) {
+              _currentIndex = index;
+            }
+            if (index == 1) {
+              _currentIndex = index;
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => FavoriteLocationsScreen()));
+            }
+            if (index == 2) {
+              _currentIndex = index;
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  String userInputLocation = '';
+
+                  return AlertDialog(
+                    title: const Text('Find Location'),
+                    content: TextField(
+                      onChanged: (newLocation) {
+                        // Handle changes in the text field
+                        userInputLocation = newLocation;
+                      },
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close the dialog
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Retrieve the new location from the text field
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      WeatherApp(city: userInputLocation)));
+                        },
+                        child: const Text('Search'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
+            if (index == 3) {
+              _currentIndex = index;
+            }
+            if (index == 4) {
+              _currentIndex = index;
+              navigateToDailyForecast();
+            }
+            ;
+          });
+        },
+        items: [
+          BottomNavyBarItem(
+              icon: const Icon(Icons.calendar_today),
+              title: const Text('Today'),
+              activeColor: Colors.white,
+              textAlign: TextAlign.center),
+          BottomNavyBarItem(
+            icon: const Icon(Icons.favorite_border),
+            title: const Text('Favorites'),
+            activeColor: Colors.white,
+            textAlign: TextAlign.center,
+          ),
+          BottomNavyBarItem(
+            icon: const Icon(Icons.search),
+            title: const Text('Location'),
+            activeColor: Colors.white,
+            textAlign: TextAlign.center,
+          ),
+          BottomNavyBarItem(
+            icon: const Icon(Icons.access_time_outlined),
+            title: const Text('Hourly'),
+            activeColor: Colors.white,
+            textAlign: TextAlign.center,
+          ),
+          BottomNavyBarItem(
+            icon: const Icon(Icons.calendar_view_week_outlined),
+            title: const Text('Daily'),
+            activeColor: Colors.white,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUI() {
@@ -308,31 +514,50 @@ class WeatherAppState extends State<WeatherApp> {
     }
 
     forecastList = dailyForecastData!.daily!;
+    return Column(
+      children: [
+        Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildMainImageOverlay(),
+                _buildHourlyForecast(),
+                _sunriseToSunset(),
+                //_buildForecastList(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainImageOverlay() {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/images/Background.jpg'),
+          image: AssetImage('assets/images/daytime_sunrise.jpg'),
           fit: BoxFit.cover,
         ),
       ),
-      width: MediaQuery.of(context).size.width,
-      height: MediaQuery.of(context).size.height,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _locationHeader(),
-            currentConditions(),
-            _currentTemperature(),
-            _hiLowTemperature(),
-            const SizedBox(height: 36.0),
-            _currentWeatherDetailsBanner(),
-            _buildHourlyForecast(),
-            //_buildForecastList(),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _locationHeader(),
+          currentConditions(),
+          _currentTemperature(),
+          _hiLowTemperature(),
+          const SizedBox(height: 36.0),
+          _currentWeatherDetailsBanner(),
+          const SizedBox(height: 32.0),
+        ],
       ),
     );
   }
@@ -392,95 +617,115 @@ class WeatherAppState extends State<WeatherApp> {
   }
 
   Widget _buildHourlyForecast() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.only(top: 40.0),
-          child: Text(
-            'Hourly Forecast',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Raleway',
-              color: Colors.white,
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      decoration: const BoxDecoration(
+          gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.fromARGB(255, 18, 64, 80),
+          Color.fromARGB(255, 15, 21, 34)
+        ],
+      )),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.only(top: 16.0),
+            child: Text(
+              'Hourly Forecast',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Raleway',
+                color: Colors.white,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8.0),
-        // Use ListView.builder to display the forecastList
-        Container(
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5),
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          height: 140,
-          child: ListView.builder(
-            shrinkWrap: true,
-            scrollDirection: Axis.horizontal,
-            itemCount: 6,
-            itemBuilder: (context, index) {
-              // Access forecastList[index] to display individual forecast details
-              return SizedBox(
-                width: 75,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      _getFormattedTime(hourlyForecastList?[index].dt as int?),
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                    Container(
-                        child: Center(
-                            child: Image.network(
-                      'https://openweathermap.org/img/wn/${hourlyForecastList?[index].weather?[0].icon}.png',
-                      width: 40,
-                      height: 40,
-                    ))),
-                    Text(
-                      '${forecastList?[index].temp?.day?.toInt()}°',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.air_rounded,
+          const SizedBox(height: 12.0),
+          // Use ListView.builder to display the forecastList
+          Container(
+            margin: const EdgeInsets.only(bottom: 32.0),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5),
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+            height: 140,
+            child: ListView.builder(
+              shrinkWrap: true,
+              scrollDirection: Axis.horizontal,
+              itemCount: 6,
+              itemBuilder: (context, index) {
+                // Access forecastList[index] to display individual forecast details
+                return SizedBox(
+                  width: 75,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                        _getFormattedTime(
+                            hourlyForecastList?[index].dt as int?),
+                        style: const TextStyle(
                           color: Colors.white,
-                          size: 12,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300,
+                          letterSpacing: 0.75,
                         ),
-                        Text(
-                          '${hourlyForecastList?[index].windSpeed?.toInt()}mph',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 12),
+                      ),
+                      Center(
+                          child: Image.network(
+                        'https://openweathermap.org/img/wn/${hourlyForecastList?[index].weather?[0].icon}.png',
+                        width: 40,
+                        height: 40,
+                      )),
+                      Text(
+                        '${forecastList?[index].temp?.day?.toInt()}°',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.air_rounded,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          Text(
+                            '${hourlyForecastList?[index].windSpeed?.toInt()}mph',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w300),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _locationHeader() {
     DateTime now = DateTime.now();
-    String formattedDate = DateFormat('EEE, MMM d').format(now);
+    //String formattedDate = DateFormat('EEE, MMM d').format(now);
     String formattedTime = DateFormat('HH:mm').format(now);
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 16.0),
+          padding: const EdgeInsets.only(top: 24.0),
           child: Text(
             capitalize(city),
             style: const TextStyle(
@@ -511,128 +756,102 @@ class WeatherAppState extends State<WeatherApp> {
   Widget currentConditions() {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
-      child: Stack(
-        children: <Widget>[
-          Center(
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
-                  width: 150,
-                  height: 30.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    color: Colors.grey.shade900.withOpacity(0.03),
-                  ),
-                ),
-              ),
-            ),
+      child: Center(
+        child: Container(
+          width: 150,
+          height: 30.0,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10.0),
+            color: Colors.black.withOpacity(0.03),
           ),
-          Center(
-            child: Text(
-              weatherData != null
-                  ? capitalizeEveryFirstLetter(
-                      '${weatherData!['weather'][0]['description']}')
-                  : 'Loading...',
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _currentWeatherDetailsBanner() {
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: Align(
-            alignment: Alignment.center,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
-                  width: 350,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.35),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10.0),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Center(
+                child: Text(
+                  weatherData != null
+                      ? capitalizeEveryFirstLetter(
+                          '${weatherData!['weather'][0]['description']}')
+                      : 'Loading...',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ),
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    weatherData != null
-                        ? '${weatherData!['clouds']['all'].toString()}% '
-                        : 'Loading...',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.cloud_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                ],
-              ),
-              Row(
-                children: [
-                  Text(
-                    weatherData != null
-                        ? '${weatherData!['main']['humidity'].toString()}% '
-                        : 'Loading...',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.water_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                ],
-              ),
-              Row(
-                children: [
-                  Text(
-                    weatherData != null
-                        ? '${weatherData!['wind']['speed'].toInt()} mph '
-                        : 'Loading...',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.air_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ],
+      ),
+    );
+  }
+
+  Widget _currentWeatherDetailsBanner() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12.0),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: Container(
+          width: 350,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.0),
+            color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.3),
           ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildWeatherDetailRow(
+                  value: weatherData != null
+                      ? '${weatherData!['clouds']['all'].toString()}%'
+                      : 'Loading...',
+                  icon: Icons.cloud_outlined,
+                ),
+                _buildWeatherDetailRow(
+                  value: weatherData != null
+                      ? '${weatherData!['main']['humidity'].toString()}%'
+                      : 'Loading...',
+                  icon: Icons.water_outlined,
+                ),
+                _buildWeatherDetailRow(
+                  value: weatherData != null
+                      ? '${weatherData!['wind']['speed'].toInt()}mph'
+                      : 'Loading...',
+                  icon: Icons.air_rounded,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeatherDetailRow({
+    required String value,
+    required IconData icon,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+            height: 1,
+          ),
+        ),
+        const SizedBox(width: 6.0),
+        Icon(
+          icon,
+          color: Colors.white,
+          size: 20,
         ),
       ],
     );
@@ -646,11 +865,18 @@ class WeatherAppState extends State<WeatherApp> {
             ? '${weatherData!['main']['temp'].toInt()}°'
             : 'Loading...',
         style: const TextStyle(
-            fontSize: 128,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Raleway',
-            height: 1),
+          shadows: <Shadow>[
+            Shadow(
+                blurRadius: 2,
+                color: Color.fromARGB(80, 0, 0, 0),
+                offset: Offset(2, 4))
+          ],
+          fontSize: 128,
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'Raleway',
+          height: 1,
+        ),
       ),
     );
   }
@@ -658,68 +884,258 @@ class WeatherAppState extends State<WeatherApp> {
   Widget _hiLowTemperature() {
     return Padding(
       padding: const EdgeInsets.only(top: 24.0),
-      child: Container(
-        height: 36.0,
-        width: 130,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10.0),
-          color: Colors.grey.shade900.withOpacity(0.1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Center(
+        child: Container(
+          width: 130,
+          height: 36.0,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10.0),
+            color: Colors.black.withOpacity(0.1),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10.0),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'H: ',
-                    style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        height: 1,
-                        fontWeight: FontWeight.w400),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'H: ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            height: 1,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          weatherData != null
+                              ? '${weatherData!['main']['temp_max'].toInt()}°'
+                              : 'Loading...',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            height: 1,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    weatherData != null
-                        ? '${weatherData!['main']['temp_max'].toInt()}°'
-                        : 'Loading...',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        height: 1,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w400),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'L: ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            height: 1,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          weatherData != null
+                              ? '${weatherData!['main']['temp_min'].toInt()}°'
+                              : 'Loading...',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            height: 1,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sunriseToSunset() {
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 15, 21, 34).withOpacity(0.3),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Container(
+            width: MediaQuery.of(context).size.width * 0.47,
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.05),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(10.0),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 children: [
-                  const Text(
-                    'L: ',
-                    style: TextStyle(
-                        fontSize: 18,
-                        height: 1,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w400),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Icon(
+                        Icons.wb_sunny_outlined,
+                        color: Color.fromARGB(255, 251, 191, 36),
+                        size: 36,
+                      ),
+                      Text(
+                        dailyForecastData != null
+                            ? _getSunMoonDuration(
+                                dailyForecastData?.daily?[0].sunrise as int?,
+                                dailyForecastData?.daily?[0].sunset as int?)
+                            : 'Loading...',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
                   ),
-                  Text(
-                    weatherData != null
-                        ? '${weatherData!['main']['temp_min'].toInt()}°'
-                        : 'Loading...',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        height: 1,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w400),
-                  ),
+                  const SizedBox(height: 8.0),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Rise',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16),
+                              textAlign: TextAlign.left,
+                            ),
+                          ),
+                          Text(
+                            'Set',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                          Text(
+                            'Golden Hour',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          )
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            '07:09',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '14:21',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                          Text(
+                            '16:21',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          )
+                        ],
+                      ),
+                    ],
+                  )
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width * 0.47,
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.05),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(10.0),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Icon(
+                        Icons.nightlight_outlined,
+                        color: Colors.white70,
+                        size: 36,
+                      ),
+                      Text(
+                        weatherData != null
+                            ? _getSunMoonDuration(
+                                dailyForecastData?.daily?[0].moonrise as int?,
+                                dailyForecastData?.daily?[0].moonset as int?)
+                            : 'Loading...',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8.0),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Rise',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16),
+                              textAlign: TextAlign.left,
+                            ),
+                          ),
+                          Text(
+                            'Set',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                          Text(
+                            'Blue Hour',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          )
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            '07:09',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '14:21',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                          Text(
+                            '16:21',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          )
+                        ],
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
