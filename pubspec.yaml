@@ -12,6 +12,7 @@ dependencies:
   http: ^1.1.2
   shared_preferences: ^2.2.2
   intl: ^0.17.0
+  bottom_navy_bar: ^6.0.0
 
 dev_dependencies:
   flutter_test:
