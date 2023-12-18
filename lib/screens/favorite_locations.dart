@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_weather_app/screens/weather_app.dart';
 
@@ -67,7 +66,7 @@ class FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
         padding: const EdgeInsets.only(top: 16.0, right: 16.0, left: 16.0),
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // You can adjust the cross-axis count as needed
+            crossAxisCount: 2,
             crossAxisSpacing: 8.0,
             mainAxisSpacing: 8.0,
           ),
@@ -86,32 +85,41 @@ class FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
                     ),
                   );
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Center(
-                        child: Text(
-                          location,
-                          style: TextStyle(
-                              color: _getRandomColor(location),
-                              fontSize: 24,
-                              fontWeight: FontWeight.w500),
-                        ),
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Center(
+                            child: Text(
+                              location,
+                              style: TextStyle(
+                                  color: _getRandomColor(location),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
                       ),
-                      InkWell(
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: InkWell(
                         child: const Icon(
                           Icons.close,
-                          color: Colors.white,
+                          color: Colors.red,
                         ),
                         onTap: () async {
                           _removeCard(index);
                           FavoriteLocations.removeFavoriteLocation(location);
                         },
-                      )
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -142,6 +150,7 @@ class FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
                     onPressed: () async {
                       await FavoriteLocations.addFavoriteLocation(userLocation);
                       _loadFavoriteLocations();
+                      // ignore: use_build_context_synchronously
                       Navigator.pop(context, userLocation);
                     },
                     child: const Text('Add'),
