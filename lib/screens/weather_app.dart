@@ -154,7 +154,7 @@ class WeatherAppState extends State<WeatherApp> {
   void navigateToDailyForecast() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const DailyForecast()),
+      MaterialPageRoute(builder: (context) => DailyForecast(city: city)),
     );
   }
 
@@ -172,19 +172,30 @@ class WeatherAppState extends State<WeatherApp> {
     return formattedDate;
   }
 
-  String _getFormattedTime(int? unixTimestamp) {
+  String _getFormattedTime(int? unixTimestamp, [formatType]) {
     if (unixTimestamp == null) {
       return '';
     }
 
-    // Convert Unix timestamp to DateTime
-    DateTime date = DateTime.fromMillisecondsSinceEpoch(unixTimestamp * 1000);
-
-    // Format the DateTime as a string
-    String formattedTime = DateFormat('HH:mm').format(date);
-    currentTime = formattedTime;
-
-    return formattedTime;
+    if (formatType == 1) {
+      // Convert Unix timestamp to DateTime for golden hour
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(unixTimestamp * 1000);
+      DateTime goldenHour = date.subtract(const Duration(seconds: 3600));
+      String formattedTime = DateFormat('HH:mm').format(goldenHour);
+      return formattedTime;
+    } else if (formatType == 2) {
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(unixTimestamp * 1000);
+      DateTime blueHour = date.add(const Duration(seconds: 600));
+      String formattedTime = DateFormat('HH:mm').format(blueHour);
+      return formattedTime;
+    } else {
+      // Convert Unix timestamp to DateTime
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(unixTimestamp * 1000);
+      // Format the DateTime as a string
+      String formattedTime = DateFormat('HH:mm').format(date);
+      currentTime = formattedTime;
+      return formattedTime;
+    }
   }
 
   String _getSunMoonDuration(int? moonrise, int? moonset) {
@@ -222,6 +233,8 @@ class WeatherAppState extends State<WeatherApp> {
         toolbarHeight: 96,
         backgroundColor: Colors.transparent,
         centerTitle: true,
+        foregroundColor: Colors.white,
+        scrolledUnderElevation: 0.0,
         title: const Text(
           '',
           style: TextStyle(
@@ -230,8 +243,6 @@ class WeatherAppState extends State<WeatherApp> {
               fontWeight: FontWeight.w600,
               color: Colors.white),
         ),
-        foregroundColor: Colors.white,
-        elevation: 0.0,
       ),
       drawer: Drawer(
         backgroundColor: const Color.fromARGB(255, 15, 21, 34),
@@ -541,7 +552,7 @@ class WeatherAppState extends State<WeatherApp> {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/images/daytime_sunrise.jpg'),
+          image: AssetImage('assets/images/morning_sunrise.jpg'),
           fit: BoxFit.cover,
         ),
       ),
@@ -624,7 +635,7 @@ class WeatherAppState extends State<WeatherApp> {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color.fromARGB(255, 18, 64, 80),
+          Color.fromARGB(255, 49, 70, 116),
           Color.fromARGB(255, 15, 21, 34)
         ],
       )),
@@ -732,7 +743,7 @@ class WeatherAppState extends State<WeatherApp> {
               fontSize: 44,
               color: Colors.white,
               height: 0,
-              fontWeight: FontWeight.normal,
+              fontWeight: FontWeight.w600,
               letterSpacing: -1,
               fontFamily: 'Raleway',
             ),
@@ -1003,7 +1014,7 @@ class WeatherAppState extends State<WeatherApp> {
                     ],
                   ),
                   const SizedBox(height: 8.0),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
@@ -1013,37 +1024,44 @@ class WeatherAppState extends State<WeatherApp> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               'Rise',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 16),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 16),
                               textAlign: TextAlign.left,
                             ),
                           ),
                           Text(
                             'Set',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           ),
                           Text(
                             'Golden Hour',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           )
                         ],
                       ),
                       Column(
                         children: [
                           Text(
-                            '07:09',
-                            style: TextStyle(
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].sunrise as int?),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            '14:21',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].sunset as int?),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           ),
                           Text(
-                            '16:21',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].sunset as int?, 1),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           )
                         ],
                       ),
@@ -1085,7 +1103,7 @@ class WeatherAppState extends State<WeatherApp> {
                     ],
                   ),
                   const SizedBox(height: 8.0),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
@@ -1113,19 +1131,25 @@ class WeatherAppState extends State<WeatherApp> {
                       Column(
                         children: [
                           Text(
-                            '07:09',
-                            style: TextStyle(
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].moonrise as int?),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            '14:21',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].moonset as int?),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           ),
                           Text(
-                            '16:21',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                            _getFormattedTime(
+                                dailyForecastData?.daily?[0].moonset as int?,
+                                2),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
                           )
                         ],
                       ),
