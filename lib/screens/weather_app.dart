@@ -1,11 +1,14 @@
 import 'dart:ui';
 import 'package:bottom_navy_bar/bottom_navy_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_weather_app/models/dailyForecast.dart';
 import 'package:flutter_weather_app/models/hourlyForecast.dart';
 import 'package:flutter_weather_app/screens/daily_forecast.dart';
 import 'package:flutter_weather_app/screens/favorite_locations.dart';
+import 'package:flutter_weather_app/screens/full_hourly_forecast.dart';
 import 'package:flutter_weather_app/screens/precipitation_forecast.dart';
+import 'package:flutter_weather_app/screens/precipitation_overview.dart';
 import 'package:flutter_weather_app/services/weather_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -151,6 +154,26 @@ class WeatherAppState extends State<WeatherApp> {
     );
   }
 
+  void navigateToPrecipitationOverview() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PrecipitationOverviewScreen(
+            city: city, dailyForecastData: dailyForecastData),
+      ),
+    );
+  }
+
+  void navigateToHourlyForecast(List<Hourly> hourlyForecastList) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            HourlyForecastScreen(hourlyForecastList: hourlyForecastList),
+      ),
+    );
+  }
+
   void navigateToDailyForecast() {
     Navigator.push(
       context,
@@ -208,11 +231,9 @@ class WeatherAppState extends State<WeatherApp> {
     DateTime moonsetTime = DateTime.fromMillisecondsSinceEpoch(moonset * 1000);
 
     Duration duration = moonsetTime.difference(moonriseTime);
-
     // Format the time as HH:mm
     String formattedDuration =
-        '${duration.inHours.toString()} hrs ${(duration.inMinutes % 60).toString()} mins';
-
+        '${(duration.inHours).abs().toString()} hrs ${(duration.inMinutes % 60).toString()} mins';
     return formattedDuration;
   }
 
@@ -278,17 +299,15 @@ class WeatherAppState extends State<WeatherApp> {
                             height: 1,
                           ),
                         ),
-                      ),
-                    ),
-                    ListTile(
-                      title: Text(
-                        currentTime,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w300,
-                          fontSize: 24,
-                          letterSpacing: 1,
-                          height: 1,
+                        subtitle: Text(
+                          currentTime,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w300,
+                            fontSize: 24,
+                            letterSpacing: 1,
+                            height: 1,
+                          ),
                         ),
                       ),
                     ),
@@ -407,7 +426,7 @@ class WeatherAppState extends State<WeatherApp> {
                   ),
                 ),
                 onTap: () {
-                  navigateToPrecipitationScreen();
+                  navigateToPrecipitationOverview();
                 },
               ),
             ),
@@ -474,6 +493,7 @@ class WeatherAppState extends State<WeatherApp> {
             }
             if (index == 3) {
               _currentIndex = index;
+              navigateToHourlyForecast(hourlyForecastList as List<Hourly>);
             }
             if (index == 4) {
               _currentIndex = index;
@@ -518,6 +538,8 @@ class WeatherAppState extends State<WeatherApp> {
   }
 
   Widget _buildUI() {
+    final backgroundImage = _getImageBasedOnTime();
+
     if (weatherData == null || dailyForecastData == null) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -537,7 +559,7 @@ class WeatherAppState extends State<WeatherApp> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildMainImageOverlay(),
-                _buildHourlyForecast(),
+                _buildHourlyForecast(backgroundImage),
                 _sunriseToSunset(),
                 //_buildForecastList(),
               ],
@@ -550,9 +572,9 @@ class WeatherAppState extends State<WeatherApp> {
 
   Widget _buildMainImageOverlay() {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/images/morning_sunrise.jpg'),
+          image: AssetImage(_getImageBasedOnTime()),
           fit: BoxFit.cover,
         ),
       ),
@@ -571,6 +593,25 @@ class WeatherAppState extends State<WeatherApp> {
         ],
       ),
     );
+  }
+
+  String _getImageBasedOnTime() {
+    final now = DateTime.now();
+    final currentTime = now.hour;
+
+    if (currentTime >= 6 && currentTime < 12) {
+      // Morning
+      return 'assets/image/morning_sunrise.jpg';
+    } else if (currentTime >= 12 && currentTime < 18) {
+      // Afternoon
+      return 'assets/images/daytime_sunrise.jpg';
+    } else if (currentTime >= 18 && currentTime < 24) {
+      // Evening
+      return 'assets/images/evening_sunset.jpg';
+    } else {
+      // Night
+      return 'assets/images/nighttime.jpg';
+    }
   }
 
   Widget _buildForecastList() {
@@ -627,16 +668,33 @@ class WeatherAppState extends State<WeatherApp> {
     );
   }
 
-  Widget _buildHourlyForecast() {
+  Widget _buildHourlyForecast(String backgroundImage) {
+    Color gradientStartColor;
+    Color gradientEndColor;
+
+    if (backgroundImage.contains('morning_sunrise')) {
+      gradientStartColor = const Color.fromARGB(255, 49, 70, 116);
+      gradientEndColor = const Color.fromARGB(255, 15, 21, 34);
+    } else if (backgroundImage.contains('daytime_sunrise')) {
+      gradientStartColor = const Color.fromARGB(255, 18, 64, 80);
+      gradientEndColor = const Color.fromARGB(255, 15, 21, 34);
+    } else if (backgroundImage.contains('evening_sunset')) {
+      gradientStartColor = const Color.fromARGB(255, 34, 47, 94);
+      gradientEndColor = const Color.fromARGB(255, 15, 21, 34);
+    } else {
+      gradientStartColor = const Color.fromARGB(255, 8, 6, 17);
+      gradientEndColor = const Color.fromARGB(255, 15, 21, 34);
+    }
+
     return Container(
       width: MediaQuery.of(context).size.width,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
           gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color.fromARGB(255, 49, 70, 116),
-          Color.fromARGB(255, 15, 21, 34)
+          gradientStartColor,
+          gradientEndColor,
         ],
       )),
       child: Column(
@@ -703,10 +761,15 @@ class WeatherAppState extends State<WeatherApp> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.air_rounded,
-                            color: Colors.white,
-                            size: 12,
+                          SvgPicture.asset(
+                            'assets/icons/wind-bold-duotone.svg',
+                            semanticsLabel: 'Wind Icon',
+                            width: 18.0,
+                            height: 18.0,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
+                            ),
                           ),
                           Text(
                             '${hourlyForecastList?[index].windSpeed?.toInt()}mph',
@@ -743,7 +806,7 @@ class WeatherAppState extends State<WeatherApp> {
               fontSize: 44,
               color: Colors.white,
               height: 0,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               letterSpacing: -1,
               fontFamily: 'Raleway',
             ),
@@ -844,7 +907,8 @@ class WeatherAppState extends State<WeatherApp> {
 
   Widget _buildWeatherDetailRow({
     required String value,
-    required IconData icon,
+    IconData icon = Icons.update_outlined,
+    SvgPicture? svgIcon,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -876,18 +940,19 @@ class WeatherAppState extends State<WeatherApp> {
             ? '${weatherData!['main']['temp'].toInt()}°'
             : 'Loading...',
         style: const TextStyle(
-          shadows: <Shadow>[
-            Shadow(
-                blurRadius: 2,
-                color: Color.fromARGB(80, 0, 0, 0),
-                offset: Offset(2, 4))
-          ],
-          fontSize: 128,
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Raleway',
-          height: 1,
-        ),
+            shadows: <Shadow>[
+              Shadow(
+                  blurRadius: 2,
+                  color: Color.fromARGB(80, 0, 0, 0),
+                  offset: Offset(2, 4))
+            ],
+            fontSize: 128,
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+            fontFamily: 'Roboto',
+            letterSpacing: -3,
+            height: 1,
+            fontFeatures: [FontFeature.tabularFigures()]),
       ),
     );
   }
@@ -1017,27 +1082,25 @@ class WeatherAppState extends State<WeatherApp> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
+                      const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
                               'Rise',
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 16),
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16),
                               textAlign: TextAlign.left,
                             ),
                           ),
                           Text(
                             'Set',
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 16),
+                            style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
                           Text(
                             'Golden Hour',
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 16),
+                            style: TextStyle(color: Colors.white, fontSize: 16),
                           )
                         ],
                       ),
@@ -1106,7 +1169,7 @@ class WeatherAppState extends State<WeatherApp> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
+                      const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Align(
