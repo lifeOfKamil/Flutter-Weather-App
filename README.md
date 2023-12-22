@@ -4,7 +4,7 @@
     <img src="logo_transparent.png" alt="Logo" width="100" height="100">
   </a>
 
-  <h3 align="center">Flutter Weather App</h3>
+  <h2 align="center">Flutter Weather App</h2>
 
   <p align="center">
     A sleek weather app with OpenWeatherMap integration, a user-friendly UI, and precise weather forecasts.
