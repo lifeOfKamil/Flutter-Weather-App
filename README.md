@@ -155,4 +155,4 @@ I would like to express my gratitude to the following:
 
 These packages greatly enhanced the functionality and aesthetics of the app.
 
-Your contributions and support have been invaluable. Thank you!
+If you made it this far, thank you again for checking out my app!
