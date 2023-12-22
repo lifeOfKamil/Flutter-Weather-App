@@ -270,15 +270,16 @@ class WeatherAppState extends State<WeatherApp> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            Expanded(
-              child: Container(
-                decoration:
-                    const BoxDecoration(color: Color.fromARGB(255, 27, 33, 45)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const ListTile(
-                      title: Text(
+            Container(
+              decoration:
+                  const BoxDecoration(color: Color.fromARGB(255, 27, 33, 45)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ListTile(
+                    title: Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      child: Text(
                         'Weather App',
                         style: TextStyle(
                           color: Colors.white,
@@ -288,48 +289,48 @@ class WeatherAppState extends State<WeatherApp> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: ListTile(
-                        title: Text(
-                          city,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            height: 1,
-                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: ListTile(
+                      title: Text(
+                        city,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          height: 1,
                         ),
-                        subtitle: Text(
-                          currentTime,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w300,
-                            fontSize: 24,
-                            letterSpacing: 1,
-                            height: 1,
-                          ),
+                      ),
+                      subtitle: Text(
+                        currentTime,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w300,
+                          fontSize: 24,
+                          letterSpacing: 1,
+                          height: 1.5,
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 32.0, bottom: 8.0),
-                      child: ListTile(
-                        title: Text(
-                          weatherData != null
-                              ? capitalizeEveryFirstLetter(
-                                  '${weatherData!['weather'][0]['description']}')
-                              : 'Loading...',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 18,
-                            height: 1,
-                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32.0, bottom: 8.0),
+                    child: ListTile(
+                      title: Text(
+                        weatherData != null
+                            ? capitalizeEveryFirstLetter(
+                                '${weatherData!['weather'][0]['description']}')
+                            : 'Loading...',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 18,
+                          height: 1,
                         ),
                       ),
-                    )
-                  ],
-                ),
+                    ),
+                  )
+                ],
               ),
             ),
             Padding(
@@ -601,7 +602,7 @@ class WeatherAppState extends State<WeatherApp> {
 
     if (currentTime >= 6 && currentTime < 12) {
       // Morning
-      return 'assets/image/morning_sunrise.jpg';
+      return 'assets/images/morning_sunrise.jpg';
     } else if (currentTime >= 12 && currentTime < 18) {
       // Afternoon
       return 'assets/images/daytime_sunrise.jpg';
@@ -816,11 +817,11 @@ class WeatherAppState extends State<WeatherApp> {
           formattedTime,
           style: const TextStyle(
             fontSize: 24,
-            color: Color.fromARGB(235, 255, 255, 255),
-            fontWeight: FontWeight.normal,
-            fontFamily: 'Raleway',
-            letterSpacing: 2,
-            height: 1,
+            color: Color.fromARGB(200, 255, 255, 255),
+            fontWeight: FontWeight.w400,
+            fontFamily: 'New York',
+            fontFeatures: [FontFeature.tabularFigures()],
+            height: 1.75,
           ),
         ),
       ],
@@ -832,7 +833,7 @@ class WeatherAppState extends State<WeatherApp> {
       padding: const EdgeInsets.only(top: 16.0),
       child: Center(
         child: Container(
-          width: 150,
+          width: 175,
           height: 30.0,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10.0),
@@ -852,6 +853,7 @@ class WeatherAppState extends State<WeatherApp> {
                     fontSize: 18,
                     color: Colors.white,
                     fontWeight: FontWeight.w400,
+                    fontFamily: 'Raleway',
                   ),
                 ),
               ),
@@ -908,7 +910,6 @@ class WeatherAppState extends State<WeatherApp> {
   Widget _buildWeatherDetailRow({
     required String value,
     IconData icon = Icons.update_outlined,
-    SvgPicture? svgIcon,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -934,7 +935,7 @@ class WeatherAppState extends State<WeatherApp> {
 
   Widget _currentTemperature() {
     return Padding(
-      padding: const EdgeInsets.only(top: 56.0),
+      padding: const EdgeInsets.only(top: 56.0, bottom: 24.0),
       child: Text(
         weatherData != null
             ? '${weatherData!['main']['temp'].toInt()}°'
@@ -948,9 +949,8 @@ class WeatherAppState extends State<WeatherApp> {
             ],
             fontSize: 128,
             color: Colors.white,
-            fontWeight: FontWeight.w400,
-            fontFamily: 'Roboto',
-            letterSpacing: -3,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Raleway',
             height: 1,
             fontFeatures: [FontFeature.tabularFigures()]),
       ),
